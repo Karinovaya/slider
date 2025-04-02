@@ -1,0 +1,417 @@
+<!--https://dsgnmax.ru/sliders/slider-shop--> <script>
+document.addEventListener('DOMContentLoaded', () => {
+    const containers = document.querySelectorAll('.js-store-grid-cont');
+
+    containers.forEach((container) => {
+      const parent = container.closest('[class*="uc-slider-shop"]');
+      if (parent) {
+        container.addEventListener('tStoreRendered', () => initializeSwiper(container, parent));
+      }
+    });
+
+    function initializeSwiper(container, parent) {
+      let slides = Array.from(container.querySelectorAll('.js-product')).slice(0, 20); // Берем только первые 20 карточек
+
+      container.classList.add('swiper');
+      const wrapper = document.createElement('div');
+      wrapper.classList.add('swiper-wrapper');
+
+      slides.forEach((slide) => {
+        slide.classList.add('swiper-slide');
+        wrapper.appendChild(slide);
+      });
+
+      container.innerHTML = '';
+      container.appendChild(wrapper);
+
+      const dbmNextButton = document.createElement('div');
+      dbmNextButton.classList.add('swiper-button-next-dbm');
+      const dbmPrevButton = document.createElement('div');
+      dbmPrevButton.classList.add('swiper-button-prev-dbm');
+
+      const dbmBulletContainer = document.createElement('div');
+      dbmBulletContainer.classList.add('dbm-bullet-container');
+
+      const playPauseButton = document.createElement('button');
+      playPauseButton.classList.add('swiper-button-play-pause');
+      playPauseButton.setAttribute('data-playing', 'true');
+      playPauseButton.innerHTML = '<img src="https://static.tildacdn.com/tild3166-3061-4565-a335-636538303436/pause.svg" alt="Pause">';    //Иконка паузы (отображается изначально)
+
+      const svgNS = "http://www.w3.org/2000/svg";
+      const svg = document.createElementNS(svgNS, "svg");
+      svg.setAttribute("viewBox", "0 0 100 100");
+      svg.setAttribute("width", 50);
+      svg.setAttribute("height", 50);
+
+      const circleBg = document.createElementNS(svgNS, "circle");
+      circleBg.setAttribute("cx", 50);
+      circleBg.setAttribute("cy", 50);
+      circleBg.setAttribute("r", 48);
+      circleBg.setAttribute("fill", "none");
+      circleBg.setAttribute("stroke", "#e0e0e0"); //Фоновый цвет круга
+      circleBg.setAttribute("stroke-width", 4);
+
+      const circleProgress = document.createElementNS(svgNS, "circle");
+      circleProgress.setAttribute("cx", 50);
+      circleProgress.setAttribute("cy", 50);
+      circleProgress.setAttribute("r", 48);
+      circleProgress.setAttribute("fill", "none");
+      circleProgress.setAttribute("stroke", "#9e495f"); //Цвет индикатора
+      circleProgress.setAttribute("stroke-width", 4);
+      circleProgress.setAttribute("stroke-dasharray", 2 * Math.PI * 48);
+      circleProgress.setAttribute("stroke-dashoffset", 2 * Math.PI * 48);
+      circleProgress.setAttribute("transform", "rotate(-90 50 50)");
+
+      svg.appendChild(circleBg);
+      svg.appendChild(circleProgress);
+      playPauseButton.appendChild(svg);
+
+      const pagination = document.createElement('div');
+      pagination.classList.add('swiper-pagination-dbm');
+
+      dbmBulletContainer.appendChild(playPauseButton);
+      dbmBulletContainer.appendChild(pagination);
+
+      container.appendChild(dbmNextButton);
+      container.appendChild(dbmPrevButton);
+      container.appendChild(dbmBulletContainer);
+
+      const swiperConfig = {
+        loop: true,
+        navigation: {
+          nextEl: dbmNextButton,
+          prevEl: dbmPrevButton,
+        },
+        pagination: {
+          el: pagination,
+          clickable: true,
+          type: 'bullets',
+        },
+        autoplay: {
+          delay: 2000,
+          disableOnInteraction: false,
+        },
+        effect: 'slide',
+        speed: 400,
+        slidesPerView: 6,
+        spaceBetween: 20,
+        slidesPerGroup: 1,
+        breakpoints: {
+          320: {
+            slidesPerView: 2,
+            slidesPerGroup: 1,
+          },
+          480: {
+            slidesPerView: 3,
+            slidesPerGroup: 1,
+          },
+          640: {
+            slidesPerView: 3,
+            slidesPerGroup: 1,
+          },
+          768: {
+            slidesPerView: 4,
+            slidesPerGroup: 1,
+          },
+          1000: {
+            slidesPerView: 5,
+            slidesPerGroup: 1,
+          },
+          1360: {
+            slidesPerView: 6,
+            slidesPerGroup: 1,
+          },
+          1920: {
+            slidesPerView: 6,
+            slidesPerGroup: 1,
+          }
+        }
+      };
+
+      const swiper = new Swiper(container, swiperConfig);
+
+      let startTime;
+      let animationFrameId;
+      const maxProgress = 2 * Math.PI * 48;
+      const delay = swiperConfig.autoplay.delay;
+      let accumulatedElapsed = 0;
+
+      const animateCircle = (timestamp) => {
+        if (!startTime) {
+          startTime = timestamp;
+        }
+        const elapsed = timestamp - startTime + accumulatedElapsed;
+        const progress = Math.min((elapsed / delay) * maxProgress, maxProgress);
+        circleProgress.style.strokeDashoffset = maxProgress - progress;
+
+        if (progress < maxProgress && playPauseButton.getAttribute('data-playing') === 'true') {
+          animationFrameId = requestAnimationFrame(animateCircle);
+        }
+      };
+
+      function resetAndStartAnimation() {
+        startTime = performance.now();
+        accumulatedElapsed = 0;
+        circleProgress.style.strokeDashoffset = maxProgress;
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+        }
+        animationFrameId = requestAnimationFrame(animateCircle);
+      }
+
+      playPauseButton.addEventListener('click', () => {
+      const isPlaying = playPauseButton.getAttribute('data-playing') === 'true';
+      const svg = playPauseButton.querySelector('svg');
+      
+      if (isPlaying) {
+        swiper.autoplay.stop();
+        playPauseButton.setAttribute('data-playing', 'false');
+        playPauseButton.innerHTML = '<img src="https://static.tildacdn.com/tild6264-3266-4130-a465-656332633661/play.svg" alt="Play">';    //иконка проигрывания
+        playPauseButton.appendChild(svg);
+        if (animationFrameId) {
+          cancelAnimationFrame(animationFrameId);
+        }
+      } else {
+        swiper.autoplay.start();
+        playPauseButton.setAttribute('data-playing', 'true');
+        playPauseButton.innerHTML = '<img src="https://static.tildacdn.com/tild3166-3061-4565-a335-636538303436/pause.svg" alt="Pause">';  //иконка паузы
+        playPauseButton.appendChild(svg); 
+        resetAndStartAnimation();
+      }
+    });
+
+      let firstSlideChange = false;
+
+    swiper.on('slideChange', () => {
+      if (!firstSlideChange) {
+        firstSlideChange = true;
+        resetAndStartAnimation();
+      } else {
+        resetAndStartAnimation();
+      }
+    });
+      window.addEventListener('resize', () => swiper.update());
+
+      swiper.init();
+    }
+
+    containers.forEach((container) => {
+      const event = new Event('tStoreRendered');
+      container.dispatchEvent(event);
+    });
+  });
+</script> <style>
+:root{
+    /*Общие стили*/
+    --dbmPaddingSliderDesktop: 40px;    /*Отступы от края экрана на декстопе*/
+    --dbmPaddingSliderTablet: 20px;     /*Отступы от края экрана на планшетах*/
+    --dbmPaddingSliderMobile: 10px;     /*Отступы от края экрана на мобилках*/
+    --dbmIconArrowPrev: url(https://img.icons8.com/?size=100&id=6EVw2VdFJQ7G&format=png&color=443b2c);   /*Иконка "предыдущий слайд"*/
+    --dbmIconArrowNext: url(https://img.icons8.com/?size=100&id=z4PLNtipFaZ3&format=png&color=443b2c);   /*Иконка "следующий слайд"*/
+    --dbmBorderRadiusArrow: 12px; /*Скругление углов у стрелок*/
+    --dbmWidthHeightArrow: 40px;  /*Ширина и высота иконки*/
+    --dbmGapSlider: 20px; /*Отступ между карточками товаров*/
+    
+    
+    /*Стили для буллетов*/
+    --dbmBackgroundBullet: #cecece; /*Фоновый цвет*/
+    --dbmGapBullet: 5px; /*Отступы вокруг*/
+    --dbmBorderRadiusBullet: 100px; /*Скругление углов*/
+    --dbmHeightBullet: 8px; /*Высота*/
+    --dbmBulletMarginTop: 20px; /*Отступ сверху до карточек*/
+    --dbmBackgroundActiveBullet: #cecece; /*Цвет активного буллета*/
+    --dbmWidthActiveBullet: 30px; /*Ширина активного буллета*/
+    --dbmColorIndicationBullet: rgba(0, 0, 0, 0.4); /*Цвет индикатора заполнения*/
+    --dbmBulletPadding: 20px; /*Отступ вокруг контейнера буллетов*/
+    --dbmBackgroundColorBullet: #ffffff;
+    --dbmBorderRadiusContainerBullet: 100px; /*Скругление углов у контейнера буллетов*/
+    
+}
+[class*="uc-slider-shop"]{
+    & .t-store__grid-separator{
+        display: none;
+    }
+    & .swiper-button-next-dbm,
+    & .swiper-button-prev-dbm {
+      position: absolute;
+      top: 0px;
+      right: 0px;
+      width: var(--dbmWidthHeightArrow);
+      height: var(--dbmWidthHeightArrow);
+      border-radius: var(--dbmBorderRadiusArrow);
+      cursor: pointer;
+    }
+    & .swiper-button-disabled{
+        opacity: 0.5;   
+    }
+    & .swiper-button-prev-dbm {
+      right: 50px; /* отодвигаем левую стрелку налево */
+    }
+    & .swiper-button-next-dbm{
+        background-image: var(--dbmIconArrowNext);
+        background-size: cover;
+        background-repeat: no-repeat;
+    }
+    & .swiper-button-prev-dbm{
+        background-image: var(--dbmIconArrowPrev);
+        background-size: cover;
+        background-repeat: no-repeat;
+    }
+    
+    /*Стили для буллетов в слайдере*/
+    & .swiper-pagination-dbm {
+        width: 100%;
+        position: relative;
+        display: flex;
+        flex-wrap: nowrap;
+        gap: var(--dbmGapBullet);
+        padding: var(--dbmBulletPadding);
+        background-color: var(--dbmBackgroundColorBullet);
+        width: fit-content;
+        border-radius: var(--dbmBorderRadiusContainerBullet);
+    }
+    
+    & .swiper-pagination-bullet {
+      background: var(--dbmBackgroundBullet);
+      width: 8px;
+      height: var(--dbmHeightBullet);
+      opacity: 0.5;
+      transition: all 0.4s ease-in-out;
+      border-radius: var(--dbmBorderRadiusBullet);
+      overflow: hidden;
+      position: relative;
+      cursor: pointer;
+    }
+    
+    & .swiper-pagination-bullet-active {
+      background: var(--dbmBackgroundActiveBullet);
+      width: var(--dbmWidthActiveBullet);
+      opacity: 1;
+    }
+    
+    /*Иконка проигрывания и паузы*/
+    & .dbm-bullet-container {
+        width: 100%;
+        margin-top: var(--dbmBulletMarginTop);
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+    }
+    
+    & .swiper-button-play-pause {
+        padding: 0;
+        border: 0;
+        background-color: transparent;
+        height: 50px;   /*Высота иконки*/
+        aspect-ratio: 1 / 1;
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+    }
+    & .swiper-button-play-pause:hover{
+        scale: 0.9;
+    }
+    
+    & .swiper-button-play-pause img {
+        height: 100%;
+        width: calc(100% - 4px);
+    }
+    & .swiper-button-play-pause svg {
+        position: absolute;
+    }
+    
+    /* Ваши стили для контейнера и карточек */
+    & .swiper {
+        margin: 0 auto; /* Центрирование контейнера */
+        overflow: hidden; 
+        max-width: calc(100vw - (var(--dbmPaddingSliderDesktop) * 2));
+        position: relative;
+        padding: 0 !important;
+        padding-top: 50px !important;
+    }
+    
+    /* Стили для внутреннего обертки */
+    & .swiper-wrapper {
+        display: flex;
+        flex-wrap: nowrap; /* Чтобы карточки стояли в ряд */
+        gap: var(--dbmGapSlider);
+    }
+    
+    & .swiper-slide {
+        height: 100%;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        flex: 0 0 auto; /* Карточки не растягиваются и не схлопываются */
+    }
+    
+    & .swiper-slide > div {
+        width: 100% !important;
+    }
+    
+    @media screen and (max-width: 1000px){
+        & .swiper {
+            max-width: calc(100vw - (var(--dbmPaddingSliderTablet) * 2));
+    
+        }    
+    }
+    
+    @media screen and (max-width: 640px){
+        & .swiper {
+            max-width: calc(100vw - (var(--dbmPaddingSliderMobile) * 2));
+        }    
+    }
+}
+
+.swiper-button-play-pause {
+    position: relative;
+    width: 50px;
+    height: 50px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .swiper-button-play-pause img {
+    z-index: 1;
+  }
+
+  .dbm-bullet-container {
+    display: flex;
+    align-items: center;
+  }
+</style> <script>
+//Подгоняем высоту всех карточек 
+function setEqualHeight() {
+    const elements = document.querySelectorAll('[class*="uc-slider-run"] .t-store__card__textwrapper');
+    if (elements.length === 0) return;
+    elements.forEach(el => el.style.height = 'auto');
+    let maxHeight = 0;
+    elements.forEach(el => {
+        const height = el.offsetHeight;
+        if (height > maxHeight) {
+            maxHeight = height;
+        }
+    });
+    elements.forEach(el => el.style.height = `${maxHeight}px`);
+}
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+document.addEventListener('DOMContentLoaded', setEqualHeight);
+window.addEventListener('resize', debounce(setEqualHeight, 250));
+const observerHeighCard = new MutationObserver(debounce(setEqualHeight, 250));
+
+const configHeightCard = { childList: true, subtree: true };
+observerHeighCard.observe(document.body, configHeightCard);
+</script> <script src="https://unpkg.com/swiper/swiper-bundle.min.js"></script>
